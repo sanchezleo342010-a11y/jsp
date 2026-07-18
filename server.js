@@ -9,6 +9,22 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123"; // Change this 
 
 app.use(express.json());
 
+// In-memory activation logs
+let activationLogs = [];
+
+function logActivity(key, hwid, status) {
+    const entry = {
+        time: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        key: key || "N/A",
+        hwid: hwid || "N/A",
+        status: status
+    };
+    activationLogs.unshift(entry);
+    if (activationLogs.length > 50) {
+        activationLogs.pop(); // Keep last 50 entries
+    }
+}
+
 // Initialize database
 function loadDB() {
     if (!fs.existsSync(DB_FILE)) {
@@ -17,7 +33,8 @@ function loadDB() {
                 "SERENITY-LIFETIME-DEV": {
                     type: "lifetime",
                     expires: "Lifetime",
-                    hwid: ""
+                    hwid: "",
+                    note: "Developer default test key"
                 }
             }
         };
@@ -37,6 +54,7 @@ app.get('/auth.php', (req, res) => {
     const hwid = req.query.hwid;
 
     if (!key || !hwid) {
+        logActivity(key, hwid, "FAILED: Missing parameters");
         return res.send("INVALID");
     }
 
@@ -44,6 +62,7 @@ app.get('/auth.php', (req, res) => {
 
     // 1. Verify key exists
     if (!db.keys[key]) {
+        logActivity(key, hwid, "FAILED: Key not found");
         return res.send("INVALID");
     }
 
@@ -54,6 +73,7 @@ app.get('/auth.php', (req, res) => {
         const expiryDate = new Date(keyData.expires);
         const now = new Date();
         if (now > expiryDate) {
+            logActivity(key, hwid, "FAILED: Key expired");
             return res.send("EXPIRED");
         }
     }
@@ -62,10 +82,13 @@ app.get('/auth.php', (req, res) => {
     if (!keyData.hwid) {
         db.keys[key].hwid = hwid;
         saveDB(db);
+        logActivity(key, hwid, "SUCCESS: Registered HWID");
     } else {
         if (keyData.hwid !== hwid) {
+            logActivity(key, hwid, "FAILED: HWID mismatch");
             return res.send("HWID_MISMATCH");
         }
+        logActivity(key, hwid, "SUCCESS: Authorized");
     }
 
     res.send("OK:" + keyData.expires);
@@ -89,9 +112,14 @@ app.get('/api/keys', requireAuth, (req, res) => {
     res.json(db.keys);
 });
 
+// Get activation logs
+app.get('/api/logs', requireAuth, (req, res) => {
+    res.json(activationLogs);
+});
+
 // Generate new key
 app.post('/api/generate', requireAuth, (req, res) => {
-    const { type } = req.body;
+    const { type, note } = req.body;
     if (type !== '1month' && type !== 'lifetime') {
         return res.status(400).json({ error: "Invalid key type" });
     }
@@ -111,11 +139,12 @@ app.post('/api/generate', requireAuth, (req, res) => {
     db.keys[newKey] = {
         type: type,
         expires: expires,
-        hwid: ""
+        hwid: "",
+        note: note || "N/A"
     };
 
     saveDB(db);
-    res.json({ key: newKey, type, expires });
+    res.json({ key: newKey, type, expires, note: db.keys[newKey].note });
 });
 
 // Reset key HWID
@@ -127,6 +156,19 @@ app.post('/api/reset', requireAuth, (req, res) => {
     }
 
     db.keys[key].hwid = "";
+    saveDB(db);
+    res.json({ success: true });
+});
+
+// Update key note/buyer details
+app.post('/api/update-note', requireAuth, (req, res) => {
+    const { key, note } = req.body;
+    const db = loadDB();
+    if (!db.keys[key]) {
+        return res.status(404).json({ error: "Key not found" });
+    }
+
+    db.keys[key].note = note || "";
     saveDB(db);
     res.json({ success: true });
 });
@@ -259,6 +301,10 @@ app.get('/admin', (req, res) => {
             .flex-group {
                 display: flex;
                 gap: 15px;
+                align-items: center;
+            }
+            .flex-group > * {
+                margin-bottom: 0 !important;
             }
             .stats {
                 display: flex;
@@ -345,6 +391,27 @@ app.get('/admin', (req, res) => {
                 display: none;
                 z-index: 1000;
             }
+            .log-box {
+                max-height: 200px;
+                overflow-y: auto;
+                background: #05070a;
+                border: 1px solid #121727;
+                border-radius: 8px;
+                padding: 12px;
+                font-family: monospace;
+                font-size: 12px;
+            }
+            .log-entry {
+                padding: 6px 0;
+                border-bottom: 1px solid rgba(18, 23, 39, 0.5);
+                display: flex;
+                justify-content: space-between;
+            }
+            .log-entry:last-child {
+                border-bottom: none;
+            }
+            .log-entry .success { color: #00ff7f; }
+            .log-entry .failed { color: #ff007f; }
         </style>
     </head>
     <body>
@@ -380,20 +447,24 @@ app.get('/admin', (req, res) => {
 
             <!-- KEY GENERATION CARD -->
             <div class="card">
-                <div class="card-title">Key Generator</div>
+                <div class="card-title">Key Generator & Buyer Notes</div>
                 <div class="flex-group">
-                    <select id="keyType">
+                    <input type="text" id="buyerNote" placeholder="Buyer Name / Notes (e.g. 'Alex Discord')" style="width: 300px; margin-bottom: 0;">
+                    <select id="keyType" style="width: 180px; margin-bottom: 0;">
                         <option value="1month">30 Days (1 Month)</option>
                         <option value="lifetime">Lifetime Access</option>
                     </select>
-                    <button onclick="generateKey()" style="max-width: 200px;">Generate Key</button>
+                    <button onclick="generateKey()" style="max-width: 150px;">Generate</button>
                 </div>
                 <div id="generatedKeyDisplay" style="margin-top: 15px; font-weight: 600; font-size: 16px; color: #00f0ff; text-align: center;"></div>
             </div>
 
             <!-- KEYS TABLE CARD -->
             <div class="card">
-                <div class="card-title">Active Licenses</div>
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <span>Active Licenses</span>
+                    <input type="text" id="searchInput" placeholder="Search by Key or Notes..." oninput="filterKeys()" style="max-width: 250px; margin-bottom: 0; padding: 8px 12px; font-size: 12px;">
+                </div>
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
@@ -402,6 +473,7 @@ app.get('/admin', (req, res) => {
                                 <th>Duration</th>
                                 <th>Expiration</th>
                                 <th>HWID Status</th>
+                                <th>Notes / Buyer</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -411,12 +483,24 @@ app.get('/admin', (req, res) => {
                     </table>
                 </div>
             </div>
+
+            <!-- LIVE ACTIVITY LOGS -->
+            <div class="card">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Live Activation Log (Last 50 Events)</span>
+                    <button class="secondary" onclick="refreshLogs()" style="width: auto; padding: 4px 10px; font-size: 11px;">Refresh Logs</button>
+                </div>
+                <div class="log-box" id="logsContainer">
+                    <!-- Logs injected dynamically -->
+                </div>
+            </div>
         </div>
 
         <div id="toast" class="toast">Action completed successfully</div>
 
         <script>
             let adminPassword = "";
+            let cachedKeys = {};
 
             function showToast(text) {
                 const toast = document.getElementById("toast");
@@ -425,7 +509,6 @@ app.get('/admin', (req, res) => {
                 setTimeout(() => { toast.style.display = "none"; }, 3000);
             }
 
-            // Auto-check session storage
             window.onload = function() {
                 const saved = sessionStorage.getItem("admin_auth");
                 if (saved) {
@@ -433,12 +516,13 @@ app.get('/admin', (req, res) => {
                     document.getElementById("loginView").style.display = "none";
                     document.getElementById("dashboardView").style.display = "block";
                     refreshDashboard();
+                    refreshLogs();
+                    setInterval(refreshLogs, 15000); // Auto-refresh logs every 15s
                 }
             }
 
             function attemptLogin() {
                 const pwd = document.getElementById("passwordInput").value;
-                // Test fetch
                 fetch("/api/keys", {
                     headers: { "Authorization": pwd }
                 })
@@ -449,6 +533,8 @@ app.get('/admin', (req, res) => {
                         document.getElementById("loginView").style.display = "none";
                         document.getElementById("dashboardView").style.display = "block";
                         refreshDashboard();
+                        refreshLogs();
+                        setInterval(refreshLogs, 15000);
                     } else {
                         document.getElementById("loginError").innerText = "Invalid Admin Password.";
                     }
@@ -469,56 +555,100 @@ app.get('/admin', (req, res) => {
                 })
                 .then(res => res.json())
                 .then(keys => {
-                    const tbody = document.getElementById("keysTableBody");
-                    tbody.innerHTML = "";
+                    cachedKeys = keys;
+                    renderKeysTable(keys);
+                });
+            }
+
+            function renderKeysTable(keys) {
+                const tbody = document.getElementById("keysTableBody");
+                tbody.innerHTML = "";
+                
+                let total = 0;
+                let active = 0;
+
+                for (const [key, data] of Object.entries(keys)) {
+                    total++;
+                    if (data.hwid) active++;
+
+                    const tr = document.createElement("tr");
+                    tr.setAttribute("data-key", key.toLowerCase());
+                    tr.setAttribute("data-note", (data.note || "").toLowerCase());
+
+                    const badgeType = data.type === "lifetime" ? "lifetime" : "month";
+                    const typeLabel = data.type === "lifetime" ? "Lifetime" : "30 Days";
                     
-                    let total = 0;
-                    let active = 0;
+                    const hwidBadge = data.hwid ? 
+                        '<span class="badge locked">Locked: ' + data.hwid + '</span>' : 
+                        '<span class="badge unlocked">Unused</span>';
 
-                    for (const [key, data] of Object.entries(keys)) {
-                        total++;
-                        if (data.hwid) active++;
+                    tr.innerHTML = `
+                        <td class="key-cell">\${key}</td>
+                        <td><span class="badge \${badgeType}">\${typeLabel}</span></td>
+                        <td>\${data.expires}</td>
+                        <td>\${hwidBadge}</td>
+                        <td>
+                            <input type="text" value="\${data.note || ''}" 
+                                   onchange="updateNote('\\\\\\\${key}\\\\\\\', this.value)" 
+                                   style="margin-bottom: 0; padding: 4px 8px; font-size: 13px; background: transparent; border: 1px dashed rgba(255,255,255,0.1); border-radius: 4px;">
+                        </td>
+                        <td class="action-buttons">
+                            \${data.hwid ? '<button class="secondary" onclick="resetHWID(\\\\\\\'\${key}\\\\\\\')">Reset HWID</button>' : ''}
+                            <button class="danger" onclick="deleteKey(\\\\\\\'\${key}\\\\\\\')">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
 
-                        const tr = document.createElement("tr");
+                document.getElementById("totalKeys").innerText = total;
+                document.getElementById("activeKeys").innerText = active;
+            }
 
-                        const badgeType = data.type === "lifetime" ? "lifetime" : "month";
-                        const typeLabel = data.type === "lifetime" ? "Lifetime" : "30 Days";
-                        
-                        const hwidBadge = data.hwid ? 
-                            '<span class="badge locked">Locked to ' + data.hwid + '</span>' : 
-                            '<span class="badge unlocked">Unused</span>';
-
-                        tr.innerHTML = \`
-                            <td class="key-cell">\${key}</td>
-                            <td><span class="badge \${badgeType}">\${typeLabel}</span></td>
-                            <td>\${data.expires}</td>
-                            <td>\${hwidBadge}</td>
-                            <td class="action-buttons">
-                                \${data.hwid ? '<button class="secondary" onclick="resetHWID(\\\'\${key}\\\')">Reset HWID</button>' : ''}
-                                <button class="danger" onclick="deleteKey(\\\'\${key}\\\')">Delete</button>
-                            </td>
-                        \`;
-                        tbody.appendChild(tr);
+            function filterKeys() {
+                const query = document.getElementById("searchInput").value.toLowerCase();
+                const rows = document.querySelectorAll("#keysTableBody tr");
+                
+                rows.forEach(row => {
+                    const keyAttr = row.getAttribute("data-key");
+                    const noteAttr = row.getAttribute("data-note");
+                    if (keyAttr.includes(query) || noteAttr.includes(query)) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
                     }
+                });
+            }
 
-                    document.getElementById("totalKeys").innerText = total;
-                    document.getElementById("activeKeys").innerText = active;
+            function updateNote(key, note) {
+                fetch("/api/update-note", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": adminPassword
+                    },
+                    body: JSON.stringify({ key, note })
+                })
+                .then(() => {
+                    showToast("Note updated successfully!");
+                    refreshDashboard();
                 });
             }
 
             function generateKey() {
                 const type = document.getElementById("keyType").value;
+                const note = document.getElementById("buyerNote").value;
                 fetch("/api/generate", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": adminPassword
                     },
-                    body: JSON.stringify({ type })
+                    body: JSON.stringify({ type, note })
                 })
                 .then(res => res.json())
                 .then(res => {
                     document.getElementById("generatedKeyDisplay").innerText = "Generated: " + res.key;
+                    document.getElementById("buyerNote").value = ""; // Clear input
                     showToast("Key generated successfully!");
                     refreshDashboard();
                 });
@@ -554,6 +684,35 @@ app.get('/admin', (req, res) => {
                         refreshDashboard();
                     });
                 }
+            }
+
+            function refreshLogs() {
+                fetch("/api/logs", {
+                    headers: { "Authorization": adminPassword }
+                })
+                .then(res => res.json())
+                .then(logs => {
+                    const container = document.getElementById("logsContainer");
+                    if (logs.length === 0) {
+                        container.innerHTML = '<div style="color: #485464; text-align: center; padding: 20px;">No activity logged yet.</div>';
+                        return;
+                    }
+                    container.innerHTML = "";
+                    logs.forEach(log => {
+                        const div = document.createElement("div");
+                        div.className = "log-entry";
+                        
+                        const isSuccess = log.status.startsWith("SUCCESS");
+                        const statusClass = isSuccess ? "success" : "failed";
+                        
+                        div.innerHTML = `
+                            <span>[\${log.time}] Key: <b style="font-family: monospace;">\${log.key}</b></span>
+                            <span>HWID: <b style="font-family: monospace;">\${log.hwid}</b></span>
+                            <span class="\${statusClass}">\${log.status}</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                });
             }
         </script>
     </body>
