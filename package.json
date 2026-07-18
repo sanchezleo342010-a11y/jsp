@@ -1,0 +1,12 @@
+{
+  "name": "serenity-auth-server",
+  "version": "1.0.0",
+  "description": "Licensing server for Serenity Client",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
