@@ -494,8 +494,8 @@ app.get('/admin', (req, res) => {
                             <td>\${data.expires}</td>
                             <td>\${hwidBadge}</td>
                             <td class="action-buttons">
-                                \${data.hwid ? '<button class="secondary" onclick="resetHWID(\\\'' + key + '\\\')">Reset HWID</button>' : ''}
-                                <button class="danger" onclick="deleteKey(\\\'' + key + '\\\')">Delete</button>
+                                \${data.hwid ? '<button class="secondary" onclick="resetHWID(\\\'\${key}\\\')">Reset HWID</button>' : ''}
+                                <button class="danger" onclick="deleteKey(\\\'\${key}\\\')">Delete</button>
                             </td>
                         \`;
                         tbody.appendChild(tr);
