@@ -9,6 +9,226 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123"; // Change this 
 
 app.use(express.json());
 
+// ----------------- HTML Landing Page UI -----------------
+app.get('/', (req, res) => {
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Serenity Client | Bedrock Edition</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+            * {
+                box-sizing: border-box;
+                font-family: 'Outfit', sans-serif;
+            }
+            body {
+                background: #06080c;
+                color: #e5e6e8;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
+            .header-line {
+                width: 100%;
+                height: 4px;
+                background: linear-gradient(90deg, #ff007f, #00f0ff);
+            }
+            header {
+                width: 100%;
+                max-width: 1100px;
+                padding: 30px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .logo {
+                font-size: 28px;
+                font-weight: 800;
+                letter-spacing: 2px;
+                color: #ff007f;
+                text-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+                text-decoration: none;
+            }
+            .admin-btn {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                color: #8a9bb4;
+                padding: 10px 20px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 600;
+                transition: background 0.2s, border 0.2s, color 0.2s;
+            }
+            .admin-btn:hover {
+                background: rgba(0, 240, 255, 0.08);
+                border-color: #00f0ff;
+                color: #00f0ff;
+            }
+            .hero {
+                text-align: center;
+                padding: 80px 20px;
+                max-width: 800px;
+            }
+            .hero h2 {
+                font-size: 54px;
+                font-weight: 800;
+                margin: 0 0 15px 0;
+                background: linear-gradient(90deg, #fff, #8a9bb4);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                letter-spacing: 1px;
+            }
+            .hero p {
+                font-size: 18px;
+                color: #8a9bb4;
+                line-height: 1.6;
+                margin: 0 0 35px 0;
+            }
+            .hero-btns {
+                display: flex;
+                gap: 20px;
+                justify-content: center;
+            }
+            .btn {
+                padding: 14px 28px;
+                font-size: 15px;
+                font-weight: 600;
+                border-radius: 8px;
+                text-decoration: none;
+                transition: transform 0.1s, opacity 0.2s;
+            }
+            .btn.primary {
+                background: linear-gradient(135deg, #ff007f, #b30059);
+                color: #fff;
+                box-shadow: 0 4px 20px rgba(255, 0, 127, 0.3);
+            }
+            .btn.secondary {
+                background: linear-gradient(135deg, #00f0ff, #0094a0);
+                color: #000;
+                box-shadow: 0 4px 20px rgba(0, 240, 255, 0.2);
+            }
+            .btn:hover {
+                opacity: 0.9;
+            }
+            .btn:active {
+                transform: scale(0.97);
+            }
+            .section {
+                width: 100%;
+                max-width: 1100px;
+                padding: 60px 20px;
+            }
+            .section-title {
+                text-align: center;
+                font-size: 32px;
+                font-weight: 800;
+                color: #fff;
+                margin-bottom: 50px;
+                letter-spacing: 1px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 30px;
+            }
+            .card {
+                background: rgba(8, 11, 17, 0.4);
+                border: 1px solid #121727;
+                border-radius: 12px;
+                padding: 30px;
+                backdrop-filter: blur(10px);
+                transition: border 0.3s, transform 0.3s;
+            }
+            .card:hover {
+                border-color: #00f0ff;
+                transform: translateY(-5px);
+            }
+            .card h3 {
+                font-size: 20px;
+                font-weight: 600;
+                margin-top: 0;
+                margin-bottom: 12px;
+                color: #00f0ff;
+            }
+            .card p {
+                font-size: 14px;
+                color: #8a9bb4;
+                line-height: 1.6;
+                margin: 0;
+            }
+            footer {
+                width: 100%;
+                border-top: 1px solid #121727;
+                padding: 40px 20px;
+                text-align: center;
+                font-size: 13px;
+                color: #485464;
+                margin-top: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header-line"></div>
+        <header>
+            <a href="#" class="logo">SERENITY</a>
+            <a href="/admin" class="admin-btn">Dashboard Access</a>
+        </header>
+
+        <div class="hero">
+            <h2>UNLEASH ULTIMATE POWER</h2>
+            <p>Experience Minecraft Bedrock like never before. Serenity is a native, highly-optimized utility client featuring customizable combat extensions, bypass modules, and a sleek modern sidebar dashboard.</p>
+            <div class="hero-btns">
+                <a href="#features" class="btn primary">Explore Features</a>
+                <a href="/admin" class="btn secondary">Get License Key</a>
+            </div>
+        </div>
+
+        <div class="section" id="features">
+            <div class="section-title">ENGINE FEATURES</div>
+            <div class="grid">
+                <div class="card">
+                    <h3>Sleek Sidebar UI</h3>
+                    <p>Designed with Dear ImGui and DirectX 11 for hardware-accelerated rendering. Smooth transitions, flat layout, and quick navigation.</p>
+                </div>
+                <div class="card">
+                    <h3>Combat Extensions</h3>
+                    <p>Unlock custom Reach parameters up to 15 blocks, and tweak horizontal/vertical knockback to completely negate enemy combos.</p>
+                </div>
+                <div class="card">
+                    <h3>Movement Utility</h3>
+                    <p>Fly with absolute control, Boost jump boosts, trigger high-velocity Speed modifiers, and climb vertical walls automatically.</p>
+                </div>
+                <div class="card">
+                    <h3>Stream Proof Security</h3>
+                    <p>Enable OBS/Discord bypass to completely hide the client menu from share screens, stream feeds, and screenshot captures.</p>
+                </div>
+                <div class="card">
+                    <h3>HWID License System</h3>
+                    <p>Secure database licensing locks each key to a single PC via hardware signature to prevent unauthorized key sharing.</p>
+                </div>
+                <div class="card">
+                    <h3>Stealth Mode</h3>
+                    <p>Hide the client icon entirely from the Windows taskbar with one toggle, and auto-hide the debug logging console.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2026 Serenity Client. Built for performance and utility.
+        </footer>
+    </body>
+    </html>
+    `);
+});
+
 // In-memory activation logs
 let activationLogs = [];
 
@@ -194,7 +414,7 @@ app.get('/admin', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Serenity | Admin Dashboard</title>
+        <title>Serenity | Admin Panel</title>
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
         <style>
             * {
@@ -202,7 +422,7 @@ app.get('/admin', (req, res) => {
                 font-family: 'Outfit', sans-serif;
             }
             body {
-                background: #06080c;
+                background: #04060a;
                 color: #e5e6e8;
                 margin: 0;
                 padding: 0;
@@ -215,6 +435,7 @@ app.get('/admin', (req, res) => {
                 width: 100%;
                 height: 4px;
                 background: linear-gradient(90deg, #ff007f, #00f0ff);
+                box-shadow: 0 2px 15px rgba(0, 240, 255, 0.4);
             }
             header {
                 width: 100%;
@@ -228,9 +449,9 @@ app.get('/admin', (req, res) => {
                 margin: 0;
                 font-size: 28px;
                 font-weight: 800;
-                letter-spacing: 2px;
+                letter-spacing: 3px;
                 color: #ff007f;
-                text-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+                text-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
             }
             .container {
                 width: 100%;
@@ -238,19 +459,28 @@ app.get('/admin', (req, res) => {
                 padding: 0 20px 40px 20px;
             }
             .card {
-                background: rgba(8, 11, 17, 0.6);
-                border: 1px solid #121727;
-                border-radius: 12px;
-                padding: 24px;
+                background: rgba(8, 11, 17, 0.7);
+                border: 1px solid rgba(18, 23, 39, 0.8);
+                border-radius: 16px;
+                padding: 28px;
                 margin-bottom: 30px;
-                backdrop-filter: blur(10px);
+                backdrop-filter: blur(12px);
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                transition: border-color 0.3s;
+            }
+            .card:hover {
+                border-color: rgba(0, 240, 255, 0.15);
             }
             .card-title {
                 font-size: 18px;
                 font-weight: 600;
                 color: #00f0ff;
                 margin-top: 0;
-                margin-bottom: 20px;
+                margin-bottom: 22px;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
             }
             .login-box {
                 max-width: 400px;
@@ -258,34 +488,36 @@ app.get('/admin', (req, res) => {
                 margin-top: 100px;
             }
             input[type="password"], input[type="text"], select {
-                background: #0c1018;
-                border: 1px solid #121727;
-                border-radius: 8px;
+                background: #070a0f;
+                border: 1px solid #161e30;
+                border-radius: 10px;
                 color: #fff;
-                padding: 12px 16px;
+                padding: 14px 18px;
                 font-size: 14px;
                 width: 100%;
-                margin-bottom: 15px;
+                margin-bottom: 18px;
                 outline: none;
-                transition: border 0.2s;
+                transition: border-color 0.2s, box-shadow 0.2s;
             }
             input:focus, select:focus {
                 border-color: #00f0ff;
+                box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
             }
             button {
                 background: linear-gradient(135deg, #00f0ff, #0094a0);
                 border: none;
-                border-radius: 8px;
+                border-radius: 10px;
                 color: #000;
-                padding: 12px 20px;
+                padding: 14px 22px;
                 font-size: 14px;
                 font-weight: 600;
                 cursor: pointer;
-                transition: transform 0.1s, opacity 0.2s;
+                transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
                 width: 100%;
             }
             button:hover {
-                opacity: 0.9;
+                opacity: 0.95;
+                box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
             }
             button:active {
                 transform: scale(0.98);
@@ -294,17 +526,32 @@ app.get('/admin', (req, res) => {
                 background: linear-gradient(135deg, #ff007f, #b30059);
                 color: #fff;
             }
+            button.danger:hover {
+                box-shadow: 0 4px 15px rgba(255, 0, 127, 0.2);
+            }
             button.secondary {
-                background: #1c2435;
+                background: #121926;
+                color: #8a9bb4;
+                border: 1px solid #1c293f;
+            }
+            button.secondary:hover {
                 color: #fff;
+                border-color: #00f0ff;
+                box-shadow: none;
             }
             .flex-group {
                 display: flex;
                 gap: 15px;
                 align-items: center;
+                flex-wrap: wrap;
             }
             .flex-group > * {
                 margin-bottom: 0 !important;
+                flex: 1;
+                min-width: 150px;
+            }
+            .flex-group button {
+                flex: 0 0 180px;
             }
             .stats {
                 display: flex;
@@ -313,25 +560,26 @@ app.get('/admin', (req, res) => {
             }
             .stat-box {
                 flex: 1;
-                background: #080b11;
+                background: rgba(8, 11, 17, 0.5);
                 border: 1px solid #121727;
-                border-radius: 8px;
-                padding: 20px;
+                border-radius: 12px;
+                padding: 24px;
                 text-align: center;
+                backdrop-filter: blur(8px);
             }
             .stat-num {
-                font-size: 32px;
+                font-size: 36px;
                 font-weight: 800;
                 color: #fff;
                 margin-bottom: 5px;
             }
-            .stat-num.active { color: #00f0ff; }
-            .stat-num.total { color: #ff007f; }
+            .stat-num.active { color: #00f0ff; text-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+            .stat-num.total { color: #ff007f; text-shadow: 0 0 10px rgba(255, 0, 127, 0.2); }
             .stat-label {
                 font-size: 12px;
                 color: #485464;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: 1.5px;
             }
             table {
                 width: 100%;
@@ -340,69 +588,75 @@ app.get('/admin', (req, res) => {
             }
             th {
                 text-align: left;
-                padding: 12px 16px;
+                padding: 14px 18px;
                 color: #485464;
-                font-size: 12px;
+                font-size: 11px;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: 1.5px;
                 border-bottom: 1px solid #121727;
             }
             td {
-                padding: 16px;
+                padding: 16px 18px;
                 border-bottom: 1px solid #121727;
                 font-size: 14px;
             }
             tr:hover td {
-                background: rgba(18, 23, 39, 0.2);
+                background: rgba(18, 23, 39, 0.15);
             }
             .key-cell {
                 font-family: monospace;
                 color: #fff;
                 font-weight: 600;
+                font-size: 14px;
             }
             .badge {
-                padding: 4px 8px;
-                border-radius: 6px;
+                padding: 5px 10px;
+                border-radius: 8px;
                 font-size: 11px;
                 font-weight: 600;
+                letter-spacing: 0.5px;
             }
-            .badge.lifetime { background: rgba(0, 240, 255, 0.1); color: #00f0ff; }
-            .badge.month { background: rgba(255, 0, 127, 0.1); color: #ff007f; }
-            .badge.locked { background: rgba(72, 84, 100, 0.2); color: #8a9bb4; }
-            .badge.unlocked { background: rgba(0, 255, 127, 0.1); color: #00ff7f; }
+            .badge.lifetime { background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.2); }
+            .badge.month { background: rgba(255, 0, 127, 0.1); color: #ff007f; border: 1px solid rgba(255, 0, 127, 0.2); }
+            .badge.locked { background: rgba(72, 84, 100, 0.15); color: #8a9bb4; border: 1px solid rgba(72, 84, 100, 0.25); }
+            .badge.unlocked { background: rgba(0, 255, 127, 0.1); color: #00ff7f; border: 1px solid rgba(0, 255, 127, 0.2); }
             .action-buttons {
                 display: flex;
                 gap: 8px;
             }
             .action-buttons button {
-                padding: 6px 12px;
-                font-size: 11px;
+                padding: 8px 14px;
+                font-size: 12px;
                 width: auto;
+                border-radius: 8px;
             }
             .toast {
                 position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: #1c2435;
+                bottom: 25px;
+                right: 25px;
+                background: #0c1018;
+                border: 1px solid #00f0ff;
                 border-left: 4px solid #00f0ff;
-                padding: 16px 24px;
-                border-radius: 4px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                color: #fff;
+                padding: 16px 28px;
+                border-radius: 8px;
+                box-shadow: 0 8px 30px rgba(0, 240, 255, 0.25);
                 display: none;
                 z-index: 1000;
+                font-weight: 600;
             }
             .log-box {
-                max-height: 200px;
+                max-height: 220px;
                 overflow-y: auto;
-                background: #05070a;
+                background: #05070b;
                 border: 1px solid #121727;
-                border-radius: 8px;
-                padding: 12px;
+                border-radius: 10px;
+                padding: 15px;
                 font-family: monospace;
-                font-size: 12px;
+                font-size: 13px;
             }
             .log-entry {
-                padding: 6px 0;
+                padding: 8px 0;
                 border-bottom: 1px solid rgba(18, 23, 39, 0.5);
                 display: flex;
                 justify-content: space-between;
@@ -410,8 +664,32 @@ app.get('/admin', (req, res) => {
             .log-entry:last-child {
                 border-bottom: none;
             }
-            .log-entry .success { color: #00ff7f; }
-            .log-entry .failed { color: #ff007f; }
+            .log-entry .success { color: #00ff7f; font-weight: 600; }
+            .log-entry .failed { color: #ff007f; font-weight: 600; }
+            
+            /* Generation Output Box */
+            .gen-output {
+                background: rgba(0, 240, 255, 0.05);
+                border: 1px dashed rgba(0, 240, 255, 0.3);
+                border-radius: 10px;
+                padding: 16px;
+                margin-top: 20px;
+                display: none;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .gen-output-key {
+                font-family: monospace;
+                font-size: 18px;
+                color: #00f0ff;
+                font-weight: 800;
+                letter-spacing: 1px;
+            }
+            .gen-output button {
+                width: auto;
+                padding: 10px 18px;
+                font-size: 13px;
+            }
         </style>
     </head>
     <body>
@@ -420,7 +698,7 @@ app.get('/admin', (req, res) => {
         <!-- LOGIN VIEW -->
         <div id="loginView" class="container login-box" style="display: block;">
             <div class="card">
-                <div class="card-title" style="text-align: center;">SERENITY ADMIN ACCESS</div>
+                <div class="card-title" style="text-align: center; justify-content: center; font-size: 20px; color: #ff007f;">SERENITY ADMIN ACCESS</div>
                 <input type="password" id="passwordInput" placeholder="Enter Admin Password">
                 <button onclick="attemptLogin()">Login to Dashboard</button>
                 <div id="loginError" style="color: #ff007f; text-align: center; margin-top: 15px; font-size: 14px;"></div>
@@ -449,21 +727,26 @@ app.get('/admin', (req, res) => {
             <div class="card">
                 <div class="card-title">Key Generator & Buyer Notes</div>
                 <div class="flex-group">
-                    <input type="text" id="buyerNote" placeholder="Buyer Name / Notes (e.g. 'Alex Discord')" style="width: 300px; margin-bottom: 0;">
-                    <select id="keyType" style="width: 180px; margin-bottom: 0;">
+                    <input type="text" id="buyerNote" placeholder="Buyer Name / Notes (e.g. 'Alex Discord')" style="flex: 2; min-width: 250px;">
+                    <select id="keyType" style="flex: 1; min-width: 150px;">
                         <option value="1month">30 Days (1 Month)</option>
                         <option value="lifetime">Lifetime Access</option>
                     </select>
-                    <button onclick="generateKey()" style="max-width: 150px;">Generate</button>
+                    <button onclick="generateKey()">Generate Key</button>
                 </div>
-                <div id="generatedKeyDisplay" style="margin-top: 15px; font-weight: 600; font-size: 16px; color: #00f0ff; text-align: center;"></div>
+                
+                <!-- New Sleek Copy Key Box -->
+                <div class="gen-output" id="genOutputBox">
+                    <span class="gen-output-key" id="genKeyText">SERENITY-XXXX-XXXX-XXXX</span>
+                    <button onclick="copyGeneratedKey()">Copy Key</button>
+                </div>
             </div>
 
             <!-- KEYS TABLE CARD -->
             <div class="card">
-                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div class="card-title">
                     <span>Active Licenses</span>
-                    <input type="text" id="searchInput" placeholder="Search by Key or Notes..." oninput="filterKeys()" style="max-width: 250px; margin-bottom: 0; padding: 8px 12px; font-size: 12px;">
+                    <input type="text" id="searchInput" placeholder="Search by Key or Notes..." oninput="filterKeys()" style="max-width: 280px; margin-bottom: 0; padding: 10px 14px; font-size: 13px;">
                 </div>
                 <div style="overflow-x: auto;">
                     <table>
@@ -486,9 +769,9 @@ app.get('/admin', (req, res) => {
 
             <!-- LIVE ACTIVITY LOGS -->
             <div class="card">
-                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="card-title">
                     <span>Live Activation Log (Last 50 Events)</span>
-                    <button class="secondary" onclick="refreshLogs()" style="width: auto; padding: 4px 10px; font-size: 11px;">Refresh Logs</button>
+                    <button class="secondary" onclick="refreshLogs()" style="width: auto; padding: 6px 14px; font-size: 12px; border-radius: 8px;">Refresh Logs</button>
                 </div>
                 <div class="log-box" id="logsContainer">
                     <!-- Logs injected dynamically -->
@@ -501,6 +784,7 @@ app.get('/admin', (req, res) => {
         <script>
             let adminPassword = "";
             let cachedKeys = {};
+            let lastGeneratedKey = "";
 
             function showToast(text) {
                 const toast = document.getElementById("toast");
@@ -582,21 +866,20 @@ app.get('/admin', (req, res) => {
                         '<span class="badge locked">Locked: ' + data.hwid + '</span>' : 
                         '<span class="badge unlocked">Unused</span>';
 
-                    tr.innerHTML = `
-                        <td class="key-cell">\${key}</td>
-                        <td><span class="badge \${badgeType}">\${typeLabel}</span></td>
-                        <td>\${data.expires}</td>
-                        <td>\${hwidBadge}</td>
-                        <td>
-                            <input type="text" value="\${data.note || ''}" 
-                                   onchange="updateNote('\\\\\\\${key}\\\\\\\', this.value)" 
-                                   style="margin-bottom: 0; padding: 4px 8px; font-size: 13px; background: transparent; border: 1px dashed rgba(255,255,255,0.1); border-radius: 4px;">
-                        </td>
-                        <td class="action-buttons">
-                            \${data.hwid ? '<button class="secondary" onclick="resetHWID(\\\\\\\'\${key}\\\\\\\')">Reset HWID</button>' : ''}
-                            <button class="danger" onclick="deleteKey(\\\\\\\'\${key}\\\\\\\')">Delete</button>
-                        </td>
-                    `;
+                    tr.innerHTML = 
+                        '<td class="key-cell">' + key + '</td>' +
+                        '<td><span class="badge ' + badgeType + '">' + typeLabel + '</span></td>' +
+                        '<td>' + data.expires + '</td>' +
+                        '<td>' + hwidBadge + '</td>' +
+                        '<td>' +
+                            '<input type="text" value="' + (data.note || '') + '" ' +
+                            'onchange="updateNote(\'' + key + '\', this.value)" ' +
+                            'style="margin-bottom: 0; padding: 6px 10px; font-size: 13px; background: transparent; border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; color: #fff;">' +
+                        '</td>' +
+                        '<td class="action-buttons">' +
+                            (data.hwid ? '<button class="secondary" onclick="resetHWID(\'' + key + '\')">Reset HWID</button>' : '') +
+                            '<button class="danger" onclick="deleteKey(\'' + key + '\')">Delete</button>' +
+                        '</td>';
                     tbody.appendChild(tr);
                 }
 
@@ -647,10 +930,21 @@ app.get('/admin', (req, res) => {
                 })
                 .then(res => res.json())
                 .then(res => {
-                    document.getElementById("generatedKeyDisplay").innerText = "Generated: " + res.key;
+                    lastGeneratedKey = res.key;
+                    document.getElementById("genKeyText").innerText = res.key;
+                    document.getElementById("genOutputBox").style.display = "flex";
                     document.getElementById("buyerNote").value = ""; // Clear input
                     showToast("Key generated successfully!");
                     refreshDashboard();
+                });
+            }
+
+            function copyGeneratedKey() {
+                if (!lastGeneratedKey) return;
+                navigator.clipboard.writeText(lastGeneratedKey).then(() => {
+                    showToast("Copied to clipboard!");
+                }).catch(() => {
+                    showToast("Failed to copy. Double click key text.");
                 });
             }
 
@@ -705,11 +999,10 @@ app.get('/admin', (req, res) => {
                         const isSuccess = log.status.startsWith("SUCCESS");
                         const statusClass = isSuccess ? "success" : "failed";
                         
-                        div.innerHTML = `
-                            <span>[\${log.time}] Key: <b style="font-family: monospace;">\${log.key}</b></span>
-                            <span>HWID: <b style="font-family: monospace;">\${log.hwid}</b></span>
-                            <span class="\${statusClass}">\${log.status}</span>
-                        `;
+                        div.innerHTML = 
+                            '<span>[' + log.time + '] Key: <b style="font-family: monospace;">' + log.key + '</b></span>' +
+                            '<span>HWID: <b style="font-family: monospace;">' + log.hwid + '</b></span>' +
+                            '<span class="' + statusClass + '">' + log.status + '</span>';
                         container.appendChild(div);
                     });
                 });
