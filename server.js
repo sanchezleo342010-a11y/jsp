@@ -45,11 +45,11 @@ app.get('/auth.php', (req, res) => {
     res.send("OK:" + (k.expires || "Lifetime"));
 });
 
-// Direct Admin API Endpoints
+// Admin API
 app.get('/api/keys', (req, res) => res.json(loadDB().keys || {}));
 app.get('/api/logs', (req, res) => res.json(activationLogs));
 app.post('/api/generate', (req, res) => {
-    const { type, note } = req.body;
+    const { type, note } = req.body || {};
     if (type !== '1month' && type !== 'lifetime') return res.status(400).json({ error: "Invalid type" });
     const r = () => Math.random().toString(16).substring(2, 6).toUpperCase();
     const key = `SERENITY-${r()}-${r()}-${r()}`;
@@ -62,17 +62,17 @@ app.post('/api/generate', (req, res) => {
     res.json({ key, type, expires, note: db.keys[key].note });
 });
 app.post('/api/reset', (req, res) => {
-    const { key } = req.body; const db = loadDB();
+    const { key } = req.body || {}; const db = loadDB();
     if (!db.keys || !db.keys[key]) return res.status(404).json({ error: "Key not found" });
     db.keys[key].hwid = ""; saveDB(db); res.json({ success: true });
 });
 app.post('/api/update-note', (req, res) => {
-    const { key, note } = req.body; const db = loadDB();
+    const { key, note } = req.body || {}; const db = loadDB();
     if (!db.keys || !db.keys[key]) return res.status(404).json({ error: "Key not found" });
     db.keys[key].note = note || ""; saveDB(db); res.json({ success: true });
 });
 app.post('/api/delete', (req, res) => {
-    const { key } = req.body; const db = loadDB();
+    const { key } = req.body || {}; const db = loadDB();
     if (!db.keys || !db.keys[key]) return res.status(404).json({ error: "Key not found" });
     delete db.keys[key]; saveDB(db); res.json({ success: true });
 });
@@ -82,7 +82,7 @@ app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Serenity Client</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;font-family:'Outfit',sans-serif}body{background:#05070b;color:#e5e6e8;margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh}.bar{width:100%;height:3px;background:linear-gradient(90deg,#ff007f,#00f0ff);box-shadow:0 0 12px rgba(0,240,255,0.5)}header{width:100%;max-width:1100px;padding:25px 20px;display:flex;justify-content:space-between;align-items:center}.logo{font-size:26px;font-weight:800;color:#ff007f;text-decoration:none;letter-spacing:2px;text-shadow:0 0 12px rgba(255,0,127,0.4)}.admin-link{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#8a9bb4;padding:8px 18px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;transition:all 0.2s}.admin-link:hover{border-color:#00f0ff;color:#00f0ff}.hero{text-align:center;padding:70px 20px;max-width:800px}.hero h2{font-size:46px;font-weight:800;margin:0 0 15px;color:#fff;letter-spacing:1px}.hero p{font-size:16px;color:#8a9bb4;line-height:1.6;margin-bottom:30px}.btns{display:flex;gap:15px;justify-content:center}.btn{padding:13px 28px;border-radius:10px;font-weight:600;text-decoration:none;transition:all 0.2s}.btn.p{background:linear-gradient(135deg,#ff007f,#b30059);color:#fff;box-shadow:0 4px 20px rgba(255,0,127,0.3)}.btn.s{background:linear-gradient(135deg,#00f0ff,#0094a0);color:#000;box-shadow:0 4px 20px rgba(0,240,255,0.2)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;width:100%;max-width:1100px;padding:40px 20px}.card{background:rgba(12,16,25,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:25px;backdrop-filter:blur(10px);transition:all 0.2s}.card:hover{border-color:rgba(0,240,255,0.3);transform:translateY(-3px)}.card h3{color:#00f0ff;margin:0 0 10px;font-size:18px}.card p{color:#8a9bb4;font-size:14px;margin:0}</style></head><body><div class="bar"></div><header><a href="#" class="logo">SERENITY</a><a href="/admin" class="admin-link">Admin Access</a></header><div class="hero"><h2>SERENITY CLIENT</h2><p>Native, highly-optimized utility client for Minecraft Bedrock Edition featuring modern sidebar UI, Reach & Knockback extensions, and Stream Proof security.</p><div class="btns"><a href="/admin" class="btn p">Get Started</a><a href="/admin" class="btn s">Admin Panel</a></div></div><div class="grid"><div class="card"><h3>Sleek UI</h3><p>Built with Dear ImGui and DirectX 11 for hardware acceleration.</p></div><div class="card"><h3>Combat Extensions</h3><p>Custom Reach and Velocity knockback controls.</p></div><div class="card"><h3>Stream Proof</h3><p>Bypass OBS and Discord screen capture automatically.</p></div><div class="card"><h3>HWID Protection</h3><p>Locks keys to unique hardware signatures.</p></div></div></body></html>`);
 });
 
-// Direct Admin Panel (No Password Required - Direct Access)
+// Admin Panel
 app.get('/admin', (req, res) => {
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Serenity Admin Panel</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>
 *{box-sizing:border-box;font-family:'Outfit',sans-serif}
@@ -140,11 +140,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="grid-flex">
             <input type="text" id="buyerNote" placeholder="Buyer Note (e.g. Alex Discord)">
             <select id="keyType"><option value="1month">30 Days (1 Month)</option><option value="lifetime">Lifetime Access</option></select>
-            <button onclick="generateKey()" style="max-width:160px">Generate Key</button>
+            <button type="button" onclick="generateKey()" style="max-width:160px">Generate Key</button>
         </div>
         <div id="genOutput" style="display:none;margin-top:18px;background:rgba(0,240,255,0.06);border:1px dashed rgba(0,240,255,0.3);padding:14px;border-radius:10px;align-items:center;justify-content:space-between">
             <span id="genKeyText" style="font-family:monospace;color:#00f0ff;font-size:17px;font-weight:800;letter-spacing:1px"></span>
-            <button onclick="copyKey()" style="width:auto;padding:8px 16px">Copy Key</button>
+            <button type="button" onclick="copyKey()" style="width:auto;padding:8px 16px">Copy Key</button>
         </div>
     </div>
     <div class="glass-card">
@@ -162,7 +162,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="glass-card">
         <div class="card-head">
             <span>Live System Activity</span>
-            <button class="secondary" onclick="refreshLogs()" style="width:auto;padding:5px 12px;font-size:11px">Refresh Logs</button>
+            <button type="button" class="secondary" onclick="refreshLogs()" style="width:auto;padding:5px 12px;font-size:11px">Refresh Logs</button>
         </div>
         <div class="log-terminal" id="logsBox"></div>
     </div>
@@ -170,11 +170,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div id="toast" class="toast-msg"></div>
 <script>
 let lastKey="";
-function showToast(m){const t=document.getElementById("toast");t.innerText=m;t.style.display="block";setTimeout(()=>t.style.display="none",3000);}
+function showToast(m){const t=document.getElementById("toast");if(t){t.innerText=m;t.style.display="block";setTimeout(()=>t.style.display="none",3000);}}
 window.onload=function(){refreshDashboard();refreshLogs();setInterval(refreshLogs,10000);}
-function refreshDashboard(){fetch("/api/keys").then(r=>r.json()).then(renderTable).catch(e=>console.error(e));}
+function refreshDashboard(){
+    fetch("/api/keys")
+    .then(r=>r.json())
+    .then(renderTable)
+    .catch(e=>{ console.error(e); alert("Dashboard fetch error: "+e.message); });
+}
 function renderTable(keys){
     const tb=document.getElementById("keysTable");
+    if(!tb) return;
     tb.innerHTML="";
     if(!keys || typeof keys !== 'object') return;
     let t=0,a=0;
@@ -187,19 +193,51 @@ function renderTable(keys){
         const bt=d.type==="lifetime"?"lft":"mth",
               tl=d.type==="lifetime"?"Lifetime":"30 Days",
               hb=d.hwid?'<span class="badge lck">Locked</span>':'<span class="badge free">Unused</span>';
-        tr.innerHTML='<td style="font-family:monospace;font-weight:700;color:#fff">'+k+'</td><td><span class="badge '+bt+'">'+tl+'</span></td><td>'+(d.expires||'Lifetime')+'</td><td>'+hb+'</td><td><input type="text" value="'+(d.note||'')+'" onchange="updateNote(\''+k+'\',this.value)" style="margin:0;padding:6px 10px;font-size:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15)"></td><td>'+(d.hwid?'<button class="secondary" onclick="resetHWID(\''+k+'\')" style="padding:5px 10px;font-size:11px;margin-right:4px">Reset HWID</button>':'')+'<button class="danger" onclick="deleteKey(\''+k+'\')" style="padding:5px 10px;font-size:11px">Delete</button></td>';
+        tr.innerHTML='<td style="font-family:monospace;font-weight:700;color:#fff">'+k+'</td><td><span class="badge '+bt+'">'+tl+'</span></td><td>'+(d.expires||'Lifetime')+'</td><td>'+hb+'</td><td><input type="text" value="'+(d.note||'')+'" onchange="updateNote(\''+k+'\',this.value)" style="margin:0;padding:6px 10px;font-size:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15)"></td><td>'+(d.hwid?'<button type="button" class="secondary" onclick="resetHWID(\''+k+'\')" style="padding:5px 10px;font-size:11px;margin-right:4px">Reset HWID</button>':'')+'<button type="button" class="danger" onclick="deleteKey(\''+k+'\')" style="padding:5px 10px;font-size:11px">Delete</button></td>';
         tb.appendChild(tr);
     }
     document.getElementById("totalKeys").innerText=t;
     document.getElementById("activeKeys").innerText=a;
 }
 function filterKeys(){const q=document.getElementById("searchInput").value.toLowerCase();document.querySelectorAll("#keysTable tr").forEach(r=>{r.style.display=(r.getAttribute("data-k").includes(q)||r.getAttribute("data-n").includes(q))?"":"none";});}
-function updateNote(k,n){fetch("/api/update-note",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k,note:n})}).then(()=>{showToast("Note updated");refreshDashboard();});}
-function generateKey(){const t=document.getElementById("keyType").value,n=document.getElementById("buyerNote").value;fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:t,note:n})}).then(r=>r.json()).then(r=>{lastKey=r.key;document.getElementById("genKeyText").innerText=r.key;document.getElementById("genOutput").style.display="flex";document.getElementById("buyerNote").value="";showToast("Key generated");refreshDashboard();});}
-function copyKey(){if(lastKey)navigator.clipboard.writeText(lastKey).then(()=>showToast("Copied to clipboard!"));}
-function resetHWID(k){fetch("/api/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k})}).then(()=>{showToast("HWID unlocked");refreshDashboard();});}
-function deleteKey(k){if(confirm("Delete key "+k+"?"))fetch("/api/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k})}).then(()=>{showToast("Key deleted");refreshDashboard();});}
-function refreshLogs(){fetch("/api/logs").then(r=>r.json()).then(logs=>{const box=document.getElementById("logsBox");if(!logs||!logs.length){box.innerHTML='<div style="color:#64748b;text-align:center">No activity logged</div>';return;}box.innerHTML="";logs.forEach(l=>{const d=document.createElement("div");d.className="log-row";const s=l.status.startsWith("SUCCESS")?"#4ade80":"#f43f5e";d.innerHTML='<span>['+l.time+'] Key: <b style="font-family:monospace;color:#fff">'+l.key+'</b></span><span style="color:'+s+';font-weight:700">'+l.status+'</span>';box.appendChild(d);});}).catch(e=>console.error(e));}
+function updateNote(k,n){fetch("/api/update-note",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k,note:n})}).then(()=>{showToast("Note updated");refreshDashboard();}).catch(e=>alert("Error updating note: "+e.message));}
+function generateKey(){
+    const t=document.getElementById("keyType").value,n=document.getElementById("buyerNote").value;
+    fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:t,note:n})})
+    .then(r=>r.json())
+    .then(r=>{
+        if(!r||!r.key){ alert("Error generating key!"); return; }
+        lastKey=r.key;
+        document.getElementById("genKeyText").innerText=r.key;
+        document.getElementById("genOutput").style.display="flex";
+        document.getElementById("buyerNote").value="";
+        showToast("Key generated: "+r.key);
+        alert("Clé Générée avec succès : " + r.key);
+        refreshDashboard();
+    })
+    .catch(e=>alert("Generate key error: "+e.message));
+}
+function copyKey(){if(lastKey)navigator.clipboard.writeText(lastKey).then(()=>{showToast("Copied to clipboard!");alert("Clé copiée !");});}
+function resetHWID(k){fetch("/api/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k})}).then(()=>{showToast("HWID unlocked");alert("HWID réinitialisé !");refreshDashboard();}).catch(e=>alert("Reset error: "+e.message));}
+function deleteKey(k){if(confirm("Delete key "+k+"?"))fetch("/api/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:k})}).then(()=>{showToast("Key deleted");alert("Clé supprimée !");refreshDashboard();}).catch(e=>alert("Delete error: "+e.message));}
+function refreshLogs(){
+    fetch("/api/logs")
+    .then(r=>r.json())
+    .then(logs=>{
+        const box=document.getElementById("logsBox");
+        if(!box) return;
+        if(!logs||!logs.length){box.innerHTML='<div style="color:#64748b;text-align:center">No activity logged</div>';return;}
+        box.innerHTML="";
+        logs.forEach(l=>{
+            const d=document.createElement("div");
+            d.className="log-row";
+            const s=(l.status||"").startsWith("SUCCESS")?"#4ade80":"#f43f5e";
+            d.innerHTML='<span>['+(l.time||'')+'] Key: <b style="font-family:monospace;color:#fff">'+(l.key||'')+': </b></span><span style="color:'+s+';font-weight:700">'+(l.status||'')+'</span>';
+            box.appendChild(d);
+        });
+    })
+    .catch(e=>console.error(e));
+}
 </script></body></html>`);
 });
 
