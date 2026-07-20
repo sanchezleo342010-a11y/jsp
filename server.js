@@ -24,7 +24,11 @@ function loadDB() {
         fs.writeFileSync(DB_FILE, JSON.stringify(init, null, 4));
         return init;
     }
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    try {
+        return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    } catch (e) {
+        return { keys: {} };
+    }
 }
 function saveDB(data) { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 4)); }
 
@@ -33,18 +37,18 @@ app.get('/auth.php', (req, res) => {
     const { key, hwid } = req.query;
     if (!key || !hwid) { logActivity(key, hwid, "FAILED: Missing params"); return res.send("INVALID"); }
     const db = loadDB();
-    if (!db.keys[key]) { logActivity(key, hwid, "FAILED: Key not found"); return res.send("INVALID"); }
+    if (!db.keys || !db.keys[key]) { logActivity(key, hwid, "FAILED: Key not found"); return res.send("INVALID"); }
     const k = db.keys[key];
     if (k.type !== 'lifetime' && new Date() > new Date(k.expires)) { logActivity(key, hwid, "FAILED: Expired"); return res.send("EXPIRED"); }
     if (!k.hwid) { k.hwid = hwid; saveDB(db); logActivity(key, hwid, "SUCCESS: Registered HWID"); }
     else if (k.hwid !== hwid) { logActivity(key, hwid, "FAILED: HWID mismatch"); return res.send("HWID_MISMATCH"); }
     else { logActivity(key, hwid, "SUCCESS: Authorized"); }
-    res.send("OK:" + k.expires);
+    res.send("OK:" + (k.expires || "Lifetime"));
 });
 
 // Admin API
 const requireAuth = (req, res, next) => (req.headers['authorization'] === ADMIN_PASSWORD) ? next() : res.status(401).json({ error: "Unauthorized" });
-app.get('/api/keys', requireAuth, (req, res) => res.json(loadDB().keys));
+app.get('/api/keys', requireAuth, (req, res) => res.json(loadDB().keys || {}));
 app.get('/api/logs', requireAuth, (req, res) => res.json(activationLogs));
 app.post('/api/generate', requireAuth, (req, res) => {
     const { type, note } = req.body;
@@ -52,6 +56,7 @@ app.post('/api/generate', requireAuth, (req, res) => {
     const r = () => Math.random().toString(16).substring(2, 6).toUpperCase();
     const key = `SERENITY-${r()}-${r()}-${r()}`;
     const db = loadDB();
+    if (!db.keys) db.keys = {};
     let expires = "Lifetime";
     if (type === '1month') { const d = new Date(); d.setDate(d.getDate() + 30); expires = d.toISOString().split('T')[0]; }
     db.keys[key] = { type, expires, hwid: "", note: note || "N/A" };
@@ -60,23 +65,23 @@ app.post('/api/generate', requireAuth, (req, res) => {
 });
 app.post('/api/reset', requireAuth, (req, res) => {
     const { key } = req.body; const db = loadDB();
-    if (!db.keys[key]) return res.status(404).json({ error: "Key not found" });
+    if (!db.keys || !db.keys[key]) return res.status(404).json({ error: "Key not found" });
     db.keys[key].hwid = ""; saveDB(db); res.json({ success: true });
 });
 app.post('/api/update-note', requireAuth, (req, res) => {
     const { key, note } = req.body; const db = loadDB();
-    if (!db.keys[key]) return res.status(404).json({ error: "Key not found" });
+    if (!db.keys || !db.keys[key]) return res.status(404).json({ error: "Key not found" });
     db.keys[key].note = note || ""; saveDB(db); res.json({ success: true });
 });
 app.post('/api/delete', requireAuth, (req, res) => {
     const { key } = req.body; const db = loadDB();
-    if (!db.keys[key]) return res.status(404).json({ error: "Key not found" });
+    if (!db.keys || !db.keys[key]) return res.status(404).json({ error: "Key not found" });
     delete db.keys[key]; saveDB(db); res.json({ success: true });
 });
 
 // Landing Page
 app.get('/', (req, res) => {
-    res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Serenity Client</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;font-family:'Outfit',sans-serif}body{background:#05070b;color:#e5e6e8;margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh}.bar{width:100%;height:3px;background:linear-gradient(90deg,#ff007f,#00f0ff);box-shadow:0 0 12px rgba(0,240,255,0.5)}header{width:100%;max-width:1100px;padding:25px 20px;display:flex;justify-content:space-between;align-items:center}.logo{font-size:26px;font-weight:800;color:#ff007f;text-decoration:none;letter-spacing:2px;text-shadow:0 0 12px rgba(255,0,127,0.4)}.admin-link{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#8a9bb4;padding:8px 18px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;transition:all 0.2s}.admin-link:hover{border-color:#00f0ff;color:#00f0ff}.hero{text-align:center;padding:70px 20px;max-width:800px}.hero h2{font-size:48px;font-weight:800;margin:0 0 15px;color:#fff;letter-spacing:1px}.hero p{font-size:16px;color:#8a9bb4;line-height:1.6;margin-bottom:30px}.btns{display:flex;gap:15px;justify-content:center}.btn{padding:13px 28px;border-radius:10px;font-weight:600;text-decoration:none;transition:all 0.2s}.btn.p{background:linear-gradient(135deg,#ff007f,#b30059);color:#fff;box-shadow:0 4px 20px rgba(255,0,127,0.3)}.btn.s{background:linear-gradient(135deg,#00f0ff,#0094a0);color:#000;box-shadow:0 4px 20px rgba(0,240,255,0.2)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;width:100%;max-width:1100px;padding:40px 20px}.card{background:rgba(12,16,25,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:25px;backdrop-filter:blur(10px);transition:all 0.2s}.card:hover{border-color:rgba(0,240,255,0.3);transform:translateY(-3px)}.card h3{color:#00f0ff;margin:0 0 10px;font-size:18px}.card p{color:#8a9bb4;font-size:14px;margin:0}</style></head><body><div class="bar"></div><header><a href="#" class="logo">SERENITY</a><a href="/admin" class="admin-link">Admin Access</a></header><div class="hero"><h2>SERENITY CLIENT</h2><p>Native, highly-optimized utility client for Minecraft Bedrock Edition featuring modern sidebar UI, Reach & Knockback extensions, and Stream Proof security.</p><div class="btns"><a href="/admin" class="btn p">Get Started</a><a href="/admin" class="btn s">Admin Panel</a></div></div><div class="grid"><div class="card"><h3>Sleek UI</h3><p>Built with Dear ImGui and DirectX 11 for hardware acceleration.</p></div><div class="card"><h3>Combat Extensions</h3><p>Custom Reach and Velocity knockback controls.</p></div><div class="card"><h3>Stream Proof</h3><p>Bypass OBS and Discord screen capture automatically.</p></div><div class="card"><h3>HWID Protection</h3><p>Locks keys to unique hardware signatures.</p></div></div></body></html>`);
+    res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Serenity Client</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;font-family:'Outfit',sans-serif}body{background:#05070b;color:#e5e6e8;margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh}.bar{width:100%;height:3px;background:linear-gradient(90deg,#ff007f,#00f0ff);box-shadow:0 0 12px rgba(0,240,255,0.5)}header{width:100%;max-width:1100px;padding:25px 20px;display:flex;justify-content:space-between;align-items:center}.logo{font-size:26px;font-weight:800;color:#ff007f;text-decoration:none;letter-spacing:2px;text-shadow:0 0 12px rgba(255,0,127,0.4)}.admin-link{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#8a9bb4;padding:8px 18px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;transition:all 0.2s}.admin-link:hover{border-color:#00f0ff;color:#00f0ff}.hero{text-align:center;padding:70px 20px;max-width:800px}.hero h2{font-size:46px;font-weight:800;margin:0 0 15px;color:#fff;letter-spacing:1px}.hero p{font-size:16px;color:#8a9bb4;line-height:1.6;margin-bottom:30px}.btns{display:flex;gap:15px;justify-content:center}.btn{padding:13px 28px;border-radius:10px;font-weight:600;text-decoration:none;transition:all 0.2s}.btn.p{background:linear-gradient(135deg,#ff007f,#b30059);color:#fff;box-shadow:0 4px 20px rgba(255,0,127,0.3)}.btn.s{background:linear-gradient(135deg,#00f0ff,#0094a0);color:#000;box-shadow:0 4px 20px rgba(0,240,255,0.2)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;width:100%;max-width:1100px;padding:40px 20px}.card{background:rgba(12,16,25,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:25px;backdrop-filter:blur(10px);transition:all 0.2s}.card:hover{border-color:rgba(0,240,255,0.3);transform:translateY(-3px)}.card h3{color:#00f0ff;margin:0 0 10px;font-size:18px}.card p{color:#8a9bb4;font-size:14px;margin:0}</style></head><body><div class="bar"></div><header><a href="#" class="logo">SERENITY</a><a href="/admin" class="admin-link">Admin Access</a></header><div class="hero"><h2>SERENITY CLIENT</h2><p>Native, highly-optimized utility client for Minecraft Bedrock Edition featuring modern sidebar UI, Reach & Knockback extensions, and Stream Proof security.</p><div class="btns"><a href="/admin" class="btn p">Get Started</a><a href="/admin" class="btn s">Admin Panel</a></div></div><div class="grid"><div class="card"><h3>Sleek UI</h3><p>Built with Dear ImGui and DirectX 11 for hardware acceleration.</p></div><div class="card"><h3>Combat Extensions</h3><p>Custom Reach and Velocity knockback controls.</p></div><div class="card"><h3>Stream Proof</h3><p>Bypass OBS and Discord screen capture automatically.</p></div><div class="card"><h3>HWID Protection</h3><p>Locks keys to unique hardware signatures.</p></div></div></body></html>`);
 });
 
 // Admin Panel (Upgraded Premium Glassmorphic Design)
@@ -128,8 +133,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div id="loginView" class="container login-card glass-card">
     <span class="lock-icon">🔒</span>
     <div class="card-head" style="justify-content:center;color:#ff007f;font-size:22px;letter-spacing:3px;margin-bottom:24px">SERENITY ADMIN</div>
-    <input type="password" id="passwordInput" placeholder="Enter Password" onkeydown="if(event.key==='Enter')attemptLogin()">
-    <button id="loginBtn" class="login-btn" onclick="attemptLogin()">Login to Dashboard</button>
+    <form onsubmit="event.preventDefault(); attemptLogin();">
+        <input type="password" id="passwordInput" placeholder="Enter Password" autocomplete="current-password">
+        <button id="loginBtn" type="submit" class="login-btn">Login to Dashboard</button>
+    </form>
     <div id="loginError" style="color:#ff007f;text-align:center;margin-top:14px;font-size:13px;font-weight:600"></div>
 </div>
 <div id="dashboardView" class="container" style="display:none">
@@ -181,17 +188,59 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 let adminPassword="", lastKey="";
 function showToast(m){const t=document.getElementById("toast");t.innerText=m;t.style.display="block";setTimeout(()=>t.style.display="none",3000);}
 window.onload=function(){const s=sessionStorage.getItem("admin_auth");if(s){adminPassword=s;document.getElementById("loginView").style.display="none";document.getElementById("dashboardView").style.display="block";refreshDashboard();refreshLogs();setInterval(refreshLogs,15000);}}
-function attemptLogin(){const p=document.getElementById("passwordInput").value,e=document.getElementById("loginError"),b=document.getElementById("loginBtn");if(!p){e.innerText="Please enter password";return;}b.innerText="Checking...";fetch("/api/keys",{headers:{"Authorization":p}}).then(r=>{if(r.ok){adminPassword=p;sessionStorage.setItem("admin_auth",p);document.getElementById("loginView").style.display="none";document.getElementById("dashboardView").style.display="block";refreshDashboard();refreshLogs();setInterval(refreshLogs,15000);}else{e.innerText="Invalid Admin Password";b.innerText="Login to Dashboard";}}).catch(()=>{e.innerText="Connection error";b.innerText="Login to Dashboard";});}
+function attemptLogin(){
+    const p=document.getElementById("passwordInput").value,e=document.getElementById("loginError"),b=document.getElementById("loginBtn");
+    if(!p){e.innerText="Please enter password";return;}
+    b.innerText="Checking...";
+    fetch("/api/keys",{headers:{"Authorization":p}})
+    .then(r=>{
+        if(r.ok){
+            adminPassword=p;
+            sessionStorage.setItem("admin_auth",p);
+            document.getElementById("loginView").style.display="none";
+            document.getElementById("dashboardView").style.display="block";
+            refreshDashboard();
+            refreshLogs();
+            setInterval(refreshLogs,15000);
+        } else {
+            e.innerText="Invalid Password (" + r.status + ")";
+            b.innerText="Login to Dashboard";
+        }
+    })
+    .catch(err=>{
+        e.innerText="Connection error: " + err.message;
+        b.innerText="Login to Dashboard";
+    });
+}
 function logout(){sessionStorage.removeItem("admin_auth");location.reload();}
-function refreshDashboard(){fetch("/api/keys",{headers:{"Authorization":adminPassword}}).then(r=>r.json()).then(renderTable);}
-function renderTable(keys){const tb=document.getElementById("keysTable");tb.innerHTML="";let t=0,a=0;for(const[k,d] of Object.entries(keys)){t++;if(d.hwid)a++;const tr=document.createElement("tr");tr.setAttribute("data-k",k.toLowerCase());tr.setAttribute("data-n",(d.note||"").toLowerCase());const bt=d.type==="lifetime"?"lft":"mth",tl=d.type==="lifetime"?"Lifetime":"30 Days",hb=d.hwid?'<span class="badge lck">Locked</span>':'<span class="badge free">Unused</span>';tr.innerHTML='<td style="font-family:monospace;font-weight:700;color:#fff">'+k+'</td><td><span class="badge '+bt+'">'+tl+'</span></td><td>'+d.expires+'</td><td>'+hb+'</td><td><input type="text" value="'+(d.note||'')+'" onchange="updateNote(\''+k+'\',this.value)" style="margin:0;padding:6px 10px;font-size:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15)"></td><td>'+(d.hwid?'<button class="secondary" onclick="resetHWID(\''+k+'\')" style="padding:5px 10px;font-size:11px;margin-right:4px">Reset HWID</button>':'')+'<button class="danger" onclick="deleteKey(\''+k+'\')" style="padding:5px 10px;font-size:11px">Delete</button></td>';tb.appendChild(tr);}document.getElementById("totalKeys").innerText=t;document.getElementById("activeKeys").innerText=a;}
+function refreshDashboard(){fetch("/api/keys",{headers:{"Authorization":adminPassword}}).then(r=>r.json()).then(renderTable).catch(e=>console.error(e));}
+function renderTable(keys){
+    const tb=document.getElementById("keysTable");
+    tb.innerHTML="";
+    if(!keys || typeof keys !== 'object') return;
+    let t=0,a=0;
+    for(const[k,d] of Object.entries(keys)){
+        if(!d) continue;
+        t++;if(d.hwid)a++;
+        const tr=document.createElement("tr");
+        tr.setAttribute("data-k",k.toLowerCase());
+        tr.setAttribute("data-n",(d.note||"").toLowerCase());
+        const bt=d.type==="lifetime"?"lft":"mth",
+              tl=d.type==="lifetime"?"Lifetime":"30 Days",
+              hb=d.hwid?'<span class="badge lck">Locked</span>':'<span class="badge free">Unused</span>';
+        tr.innerHTML='<td style="font-family:monospace;font-weight:700;color:#fff">'+k+'</td><td><span class="badge '+bt+'">'+tl+'</span></td><td>'+(d.expires||'Lifetime')+'</td><td>'+hb+'</td><td><input type="text" value="'+(d.note||'')+'" onchange="updateNote(\''+k+'\',this.value)" style="margin:0;padding:6px 10px;font-size:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15)"></td><td>'+(d.hwid?'<button class="secondary" onclick="resetHWID(\''+k+'\')" style="padding:5px 10px;font-size:11px;margin-right:4px">Reset HWID</button>':'')+'<button class="danger" onclick="deleteKey(\''+k+'\')" style="padding:5px 10px;font-size:11px">Delete</button></td>';
+        tb.appendChild(tr);
+    }
+    document.getElementById("totalKeys").innerText=t;
+    document.getElementById("activeKeys").innerText=a;
+}
 function filterKeys(){const q=document.getElementById("searchInput").value.toLowerCase();document.querySelectorAll("#keysTable tr").forEach(r=>{r.style.display=(r.getAttribute("data-k").includes(q)||r.getAttribute("data-n").includes(q))?"":"none";});}
 function updateNote(k,n){fetch("/api/update-note",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({key:k,note:n})}).then(()=>{showToast("Note updated");refreshDashboard();});}
 function generateKey(){const t=document.getElementById("keyType").value,n=document.getElementById("buyerNote").value;fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({type:t,note:n})}).then(r=>r.json()).then(r=>{lastKey=r.key;document.getElementById("genKeyText").innerText=r.key;document.getElementById("genOutput").style.display="flex";document.getElementById("buyerNote").value="";showToast("Key generated");refreshDashboard();});}
 function copyKey(){if(lastKey)navigator.clipboard.writeText(lastKey).then(()=>showToast("Copied to clipboard!"));}
 function resetHWID(k){fetch("/api/reset",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({key:k})}).then(()=>{showToast("HWID unlocked");refreshDashboard();});}
 function deleteKey(k){if(confirm("Delete key "+k+"?"))fetch("/api/delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({key:k})}).then(()=>{showToast("Key deleted");refreshDashboard();});}
-function refreshLogs(){fetch("/api/logs",{headers:{"Authorization":adminPassword}}).then(r=>r.json()).then(logs=>{const box=document.getElementById("logsBox");if(!logs.length){box.innerHTML='<div style="color:#64748b;text-align:center">No activity logged</div>';return;}box.innerHTML="";logs.forEach(l=>{const d=document.createElement("div");d.className="log-row";const s=l.status.startsWith("SUCCESS")?"#4ade80":"#f43f5e";d.innerHTML='<span>['+l.time+'] Key: <b style="font-family:monospace;color:#fff">'+l.key+'</b></span><span style="color:'+s+';font-weight:700">'+l.status+'</span>';box.appendChild(d);});});}
+function refreshLogs(){fetch("/api/logs",{headers:{"Authorization":adminPassword}}).then(r=>r.json()).then(logs=>{const box=document.getElementById("logsBox");if(!logs||!logs.length){box.innerHTML='<div style="color:#64748b;text-align:center">No activity logged</div>';return;}box.innerHTML="";logs.forEach(l=>{const d=document.createElement("div");d.className="log-row";const s=l.status.startsWith("SUCCESS")?"#4ade80":"#f43f5e";d.innerHTML='<span>['+l.time+'] Key: <b style="font-family:monospace;color:#fff">'+l.key+'</b></span><span style="color:'+s+';font-weight:700">'+l.status+'</span>';box.appendChild(d);});}).catch(e=>console.error(e));}
 </script></body></html>`);
 });
 
