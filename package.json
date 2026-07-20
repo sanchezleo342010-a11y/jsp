@@ -1,12 +1,13 @@
 {
   "name": "serenity-auth-server",
   "version": "1.0.0",
-  "description": "Licensing server for Serenity Client",
+  "description": "Licensing server and Discord Bot for Serenity Client",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "discord.js": "^14.14.1",
     "express": "^4.19.2"
   }
 }
