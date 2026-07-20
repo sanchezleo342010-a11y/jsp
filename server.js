@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const DB_FILE = path.join(__dirname, 'database.json');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "admin123").trim();
 
 app.use(express.json());
 
@@ -46,8 +46,17 @@ app.get('/auth.php', (req, res) => {
     res.send("OK:" + (k.expires || "Lifetime"));
 });
 
+// Robust Auth Middleware (Check Header, Query Param, or Body)
+const requireAuth = (req, res, next) => {
+    const token = (req.headers['authorization'] || req.headers['x-admin-password'] || req.query.pass || (req.body && req.body.password) || '').toString().trim();
+    if (token === ADMIN_PASSWORD || token.toLowerCase() === ADMIN_PASSWORD.toLowerCase()) {
+        next();
+    } else {
+        res.status(401).json({ error: "Unauthorized", hint: "Check admin password" });
+    }
+};
+
 // Admin API
-const requireAuth = (req, res, next) => (req.headers['authorization'] === ADMIN_PASSWORD) ? next() : res.status(401).json({ error: "Unauthorized" });
 app.get('/api/keys', requireAuth, (req, res) => res.json(loadDB().keys || {}));
 app.get('/api/logs', requireAuth, (req, res) => res.json(activationLogs));
 app.post('/api/generate', requireAuth, (req, res) => {
@@ -84,7 +93,7 @@ app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Serenity Client</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;font-family:'Outfit',sans-serif}body{background:#05070b;color:#e5e6e8;margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh}.bar{width:100%;height:3px;background:linear-gradient(90deg,#ff007f,#00f0ff);box-shadow:0 0 12px rgba(0,240,255,0.5)}header{width:100%;max-width:1100px;padding:25px 20px;display:flex;justify-content:space-between;align-items:center}.logo{font-size:26px;font-weight:800;color:#ff007f;text-decoration:none;letter-spacing:2px;text-shadow:0 0 12px rgba(255,0,127,0.4)}.admin-link{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#8a9bb4;padding:8px 18px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;transition:all 0.2s}.admin-link:hover{border-color:#00f0ff;color:#00f0ff}.hero{text-align:center;padding:70px 20px;max-width:800px}.hero h2{font-size:46px;font-weight:800;margin:0 0 15px;color:#fff;letter-spacing:1px}.hero p{font-size:16px;color:#8a9bb4;line-height:1.6;margin-bottom:30px}.btns{display:flex;gap:15px;justify-content:center}.btn{padding:13px 28px;border-radius:10px;font-weight:600;text-decoration:none;transition:all 0.2s}.btn.p{background:linear-gradient(135deg,#ff007f,#b30059);color:#fff;box-shadow:0 4px 20px rgba(255,0,127,0.3)}.btn.s{background:linear-gradient(135deg,#00f0ff,#0094a0);color:#000;box-shadow:0 4px 20px rgba(0,240,255,0.2)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;width:100%;max-width:1100px;padding:40px 20px}.card{background:rgba(12,16,25,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:25px;backdrop-filter:blur(10px);transition:all 0.2s}.card:hover{border-color:rgba(0,240,255,0.3);transform:translateY(-3px)}.card h3{color:#00f0ff;margin:0 0 10px;font-size:18px}.card p{color:#8a9bb4;font-size:14px;margin:0}</style></head><body><div class="bar"></div><header><a href="#" class="logo">SERENITY</a><a href="/admin" class="admin-link">Admin Access</a></header><div class="hero"><h2>SERENITY CLIENT</h2><p>Native, highly-optimized utility client for Minecraft Bedrock Edition featuring modern sidebar UI, Reach & Knockback extensions, and Stream Proof security.</p><div class="btns"><a href="/admin" class="btn p">Get Started</a><a href="/admin" class="btn s">Admin Panel</a></div></div><div class="grid"><div class="card"><h3>Sleek UI</h3><p>Built with Dear ImGui and DirectX 11 for hardware acceleration.</p></div><div class="card"><h3>Combat Extensions</h3><p>Custom Reach and Velocity knockback controls.</p></div><div class="card"><h3>Stream Proof</h3><p>Bypass OBS and Discord screen capture automatically.</p></div><div class="card"><h3>HWID Protection</h3><p>Locks keys to unique hardware signatures.</p></div></div></body></html>`);
 });
 
-// Admin Panel (Upgraded Premium Glassmorphic Design)
+// Admin Panel
 app.get('/admin', (req, res) => {
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Serenity Admin Panel</title><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet"><style>
 *{box-sizing:border-box;font-family:'Outfit',sans-serif}
@@ -189,10 +198,10 @@ let adminPassword="", lastKey="";
 function showToast(m){const t=document.getElementById("toast");t.innerText=m;t.style.display="block";setTimeout(()=>t.style.display="none",3000);}
 window.onload=function(){const s=sessionStorage.getItem("admin_auth");if(s){adminPassword=s;document.getElementById("loginView").style.display="none";document.getElementById("dashboardView").style.display="block";refreshDashboard();refreshLogs();setInterval(refreshLogs,15000);}}
 function attemptLogin(){
-    const p=document.getElementById("passwordInput").value,e=document.getElementById("loginError"),b=document.getElementById("loginBtn");
+    const p=(document.getElementById("passwordInput").value||"").trim(),e=document.getElementById("loginError"),b=document.getElementById("loginBtn");
     if(!p){e.innerText="Please enter password";return;}
     b.innerText="Checking...";
-    fetch("/api/keys",{headers:{"Authorization":p}})
+    fetch("/api/keys?pass="+encodeURIComponent(p),{headers:{"Authorization":p,"x-admin-password":p}})
     .then(r=>{
         if(r.ok){
             adminPassword=p;
@@ -203,17 +212,17 @@ function attemptLogin(){
             refreshLogs();
             setInterval(refreshLogs,15000);
         } else {
-            e.innerText="Invalid Password (" + r.status + ")";
+            e.innerText="Invalid Password (Status: " + r.status + ")";
             b.innerText="Login to Dashboard";
         }
     })
     .catch(err=>{
-        e.innerText="Connection error: " + err.message;
+        e.innerText="Network error: " + err.message;
         b.innerText="Login to Dashboard";
     });
 }
 function logout(){sessionStorage.removeItem("admin_auth");location.reload();}
-function refreshDashboard(){fetch("/api/keys",{headers:{"Authorization":adminPassword}}).then(r=>r.json()).then(renderTable).catch(e=>console.error(e));}
+function refreshDashboard(){fetch("/api/keys?pass="+encodeURIComponent(adminPassword),{headers:{"Authorization":adminPassword,"x-admin-password":adminPassword}}).then(r=>r.json()).then(renderTable).catch(e=>console.error(e));}
 function renderTable(keys){
     const tb=document.getElementById("keysTable");
     tb.innerHTML="";
@@ -235,12 +244,12 @@ function renderTable(keys){
     document.getElementById("activeKeys").innerText=a;
 }
 function filterKeys(){const q=document.getElementById("searchInput").value.toLowerCase();document.querySelectorAll("#keysTable tr").forEach(r=>{r.style.display=(r.getAttribute("data-k").includes(q)||r.getAttribute("data-n").includes(q))?"":"none";});}
-function updateNote(k,n){fetch("/api/update-note",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({key:k,note:n})}).then(()=>{showToast("Note updated");refreshDashboard();});}
-function generateKey(){const t=document.getElementById("keyType").value,n=document.getElementById("buyerNote").value;fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({type:t,note:n})}).then(r=>r.json()).then(r=>{lastKey=r.key;document.getElementById("genKeyText").innerText=r.key;document.getElementById("genOutput").style.display="flex";document.getElementById("buyerNote").value="";showToast("Key generated");refreshDashboard();});}
+function updateNote(k,n){fetch("/api/update-note?pass="+encodeURIComponent(adminPassword),{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword,"x-admin-password":adminPassword},body:JSON.stringify({key:k,note:n,password:adminPassword})}).then(()=>{showToast("Note updated");refreshDashboard();});}
+function generateKey(){const t=document.getElementById("keyType").value,n=document.getElementById("buyerNote").value;fetch("/api/generate?pass="+encodeURIComponent(adminPassword),{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword,"x-admin-password":adminPassword},body:JSON.stringify({type:t,note:n,password:adminPassword})}).then(r=>r.json()).then(r=>{lastKey=r.key;document.getElementById("genKeyText").innerText=r.key;document.getElementById("genOutput").style.display="flex";document.getElementById("buyerNote").value="";showToast("Key generated");refreshDashboard();});}
 function copyKey(){if(lastKey)navigator.clipboard.writeText(lastKey).then(()=>showToast("Copied to clipboard!"));}
-function resetHWID(k){fetch("/api/reset",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({key:k})}).then(()=>{showToast("HWID unlocked");refreshDashboard();});}
-function deleteKey(k){if(confirm("Delete key "+k+"?"))fetch("/api/delete",{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword},body:JSON.stringify({key:k})}).then(()=>{showToast("Key deleted");refreshDashboard();});}
-function refreshLogs(){fetch("/api/logs",{headers:{"Authorization":adminPassword}}).then(r=>r.json()).then(logs=>{const box=document.getElementById("logsBox");if(!logs||!logs.length){box.innerHTML='<div style="color:#64748b;text-align:center">No activity logged</div>';return;}box.innerHTML="";logs.forEach(l=>{const d=document.createElement("div");d.className="log-row";const s=l.status.startsWith("SUCCESS")?"#4ade80":"#f43f5e";d.innerHTML='<span>['+l.time+'] Key: <b style="font-family:monospace;color:#fff">'+l.key+'</b></span><span style="color:'+s+';font-weight:700">'+l.status+'</span>';box.appendChild(d);});}).catch(e=>console.error(e));}
+function resetHWID(k){fetch("/api/reset?pass="+encodeURIComponent(adminPassword),{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword,"x-admin-password":adminPassword},body:JSON.stringify({key:k,password:adminPassword})}).then(()=>{showToast("HWID unlocked");refreshDashboard();});}
+function deleteKey(k){if(confirm("Delete key "+k+"?"))fetch("/api/delete?pass="+encodeURIComponent(adminPassword),{method:"POST",headers:{"Content-Type":"application/json","Authorization":adminPassword,"x-admin-password":adminPassword},body:JSON.stringify({key:k,password:adminPassword})}).then(()=>{showToast("Key deleted");refreshDashboard();});}
+function refreshLogs(){fetch("/api/logs?pass="+encodeURIComponent(adminPassword),{headers:{"Authorization":adminPassword,"x-admin-password":adminPassword}}).then(r=>r.json()).then(logs=>{const box=document.getElementById("logsBox");if(!logs||!logs.length){box.innerHTML='<div style="color:#64748b;text-align:center">No activity logged</div>';return;}box.innerHTML="";logs.forEach(l=>{const d=document.createElement("div");d.className="log-row";const s=l.status.startsWith("SUCCESS")?"#4ade80":"#f43f5e";d.innerHTML='<span>['+l.time+'] Key: <b style="font-family:monospace;color:#fff">'+l.key+'</b></span><span style="color:'+s+';font-weight:700">'+l.status+'</span>';box.appendChild(d);});}).catch(e=>console.error(e));}
 </script></body></html>`);
 });
 
