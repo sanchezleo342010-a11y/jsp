@@ -699,8 +699,8 @@ app.get('/admin', (req, res) => {
         <div id="loginView" class="container login-box" style="display: block;">
             <div class="card">
                 <div class="card-title" style="text-align: center; justify-content: center; font-size: 20px; color: #ff007f;">SERENITY ADMIN ACCESS</div>
-                <input type="password" id="passwordInput" placeholder="Enter Admin Password">
-                <button onclick="attemptLogin()">Login to Dashboard</button>
+                <input type="password" id="passwordInput" placeholder="Enter Admin Password" onkeydown="if(event.key==='Enter') attemptLogin()">
+                <button id="loginBtn" onclick="attemptLogin()">Login to Dashboard</button>
                 <div id="loginError" style="color: #ff007f; text-align: center; margin-top: 15px; font-size: 14px;"></div>
             </div>
         </div>
@@ -807,6 +807,17 @@ app.get('/admin', (req, res) => {
 
             function attemptLogin() {
                 const pwd = document.getElementById("passwordInput").value;
+                const errDiv = document.getElementById("loginError");
+                const btn = document.getElementById("loginBtn");
+                
+                if (!pwd) {
+                    errDiv.innerText = "Please enter a password.";
+                    return;
+                }
+
+                errDiv.innerText = "";
+                if (btn) btn.innerText = "Checking...";
+
                 fetch("/api/keys", {
                     headers: { "Authorization": pwd }
                 })
@@ -820,11 +831,13 @@ app.get('/admin', (req, res) => {
                         refreshLogs();
                         setInterval(refreshLogs, 15000);
                     } else {
-                        document.getElementById("loginError").innerText = "Invalid Admin Password.";
+                        errDiv.innerText = "Invalid Admin Password.";
+                        if (btn) btn.innerText = "Login to Dashboard";
                     }
                 })
                 .catch(() => {
-                    document.getElementById("loginError").innerText = "Connection error.";
+                    errDiv.innerText = "Connection error. Please try again.";
+                    if (btn) btn.innerText = "Login to Dashboard";
                 });
             }
 
